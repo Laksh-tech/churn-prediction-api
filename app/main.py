@@ -10,11 +10,12 @@ from train import ChurnNet # Import your model structure
 # --- 1. SETUP & LOADING ---
 app = FastAPI(title="Churn Prediction API", version="1.0")
 
-# Dynamic Paths (So it works on D:\ or Cloud)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_PATH = os.path.join(BASE_DIR, "app", "model", "churn_model.pth")
-PREPROCESSOR_PATH = os.path.join(BASE_DIR, "app", "model", "preprocessor.joblib")
+# Get the absolute path of the directory where main.py sits (the 'app' folder)
+CURRENT_FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Point directly to the model folder inside 'app'
+MODEL_PATH = os.path.join(CURRENT_FILE_DIR, "model", "churn_model.pth")
+PREPROCESSOR_PATH = os.path.join(CURRENT_FILE_DIR, "model", "preprocessor.joblib")
 # Global variables to hold the model in memory
 model = None
 preprocessor = None
@@ -23,6 +24,9 @@ preprocessor = None
 @app.on_event("startup")
 def load_artifacts():
     global model, preprocessor
+    print(f"DEBUG: Looking for model at {MODEL_PATH}")
+    if not os.path.exists(MODEL_PATH):
+        print(f"❌ ERROR: File not found at {MODEL_PATH}")
     try:
         # Load the Translator (Preprocessor)
         preprocessor = joblib.load(PREPROCESSOR_PATH)
@@ -97,6 +101,7 @@ def predict_churn(data: EmployeeData):
         }
 
     except Exception as e:
+        print(f"DEBUG ERROR: {e}")
         return {"error": str(e)}
 
 # --- 4. HEALTH CHECK ---

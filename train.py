@@ -101,10 +101,11 @@ def main():
                 y_pred_np = val_preds.cpu().numpy()
                 
                 val_acc = (val_preds == y_test).float().mean().item()
+                
                 prec = precision_score(y_true_np, y_pred_np, zero_division=0)
                 rec = recall_score(y_true_np, y_pred_np, zero_division=0)
                 f1 = f1_score(y_true_np, y_pred_np, zero_division=0)
-
+                scheduler.step(f1)
                 # Print Dashboard
                 print(f"  Epoch {epoch+1} | Loss: {loss.item():.4f}")
                 print(f"      📊 Acc: {val_acc:.2%} | Prec: {prec:.2%} | Rec: {rec:.2%} | F1: {f1:.2%}")

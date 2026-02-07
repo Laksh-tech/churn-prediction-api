@@ -12,7 +12,7 @@ class Churn_Modelling:
     
         num_tranformer= Pipeline(steps=
            [('imputer',SimpleImputer(strategy='median')),('scaler',StandardScaler())])
-        cat_transformer=Pipeline(steps=[('imputer',SimpleImputer(strategy='constant',fill_value='missing')),('OneHotEncoder',OneHotEncoder(handle_unknown='ignore'))])
+        cat_transformer=Pipeline(steps=[('imputer',SimpleImputer(strategy='constant', missing_values=' ',fill_value='missing')),('OneHotEncoder',OneHotEncoder(handle_unknown='ignore'))])
 
         self.preprocessor=ColumnTransformer(transformers=[('num',num_tranformer,self.numeric_features),('cat',cat_transformer,self.categorical_features)])
 

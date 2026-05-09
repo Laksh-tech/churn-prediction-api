@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Churn Prediction Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #1c2333;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #6e7681;
+    --blue: #388bfd;
+    --blue-dim: rgba(56,139,253,0.12);
+    --green: #3fb950;
+    --green-dim: rgba(63,185,80,0.12);
+    --orange: #d29922;
+    --orange-dim: rgba(210,153,34,0.12);
+    --red: #f85149;
+    --red-dim: rgba(248,81,73,0.12);
+    --accent: #79c0ff;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--blue);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .logo-text { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+  .logo-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 1px; }
+
+  .header-right {
+    display: flex; align-items: center; gap: 16px;
+  }
+  .badge-model {
+    font-family: var(--mono); font-size: 11px;
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--blue-dim); color: var(--blue);
+    border: 1px solid rgba(56,139,253,0.25);
+  }
+  .badge-threshold {
+    font-family: var(--mono); font-size: 11px;
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--orange-dim); color: var(--orange);
+    border: 1px solid rgba(210,153,34,0.25);
+  }
+
+  /* ── Main layout ── */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: 1fr;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── Left panel ── */
+  .panel-left {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background: var(--bg2);
+    display: flex; flex-direction: column;
+  }
+  .panel-section {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-section:last-child { border-bottom: none; }
+  .section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 14px;
+  }
+
+  /* Form controls */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label {
+    font-size: 12px; color: var(--text2); margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .field-value {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+  }
+  input[type=range] {
+    /* -webkit-appearance: none; */
+    appearance: none;
+    width: 100%; height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--blue);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  select {
+    width: 100%;
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    font-size: 13px;
+    font-family: var(--sans);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  select:focus { border-color: var(--blue); }
+
+  .toggle-row {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .toggle-btn {
+    flex: 1;
+    padding: 7px 0;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    background: var(--bg3);
+    color: var(--text2);
+    font-size: 12px;
+    font-family: var(--sans);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active {
+    background: var(--blue-dim);
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  .predict-btn {
+    width: 100%; padding: 11px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 600;
+    font-family: var(--sans);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+  .predict-btn:hover { background: #58a6ff; transform: translateY(-1px); }
+  .predict-btn:active { transform: translateY(0); }
+  .predict-btn:disabled { background: var(--bg3); color: var(--text3); cursor: not-allowed; transform: none; }
+
+  /* ── Right panel ── */
+  .panel-right {
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  /* KPI strip */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.blue::before { background: var(--blue); }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.orange::before { background: var(--orange); }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-label {
+    font-size: 11px; color: var(--text3); letter-spacing: 0.06em;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .kpi-value {
+    font-size: 26px; font-weight: 600; line-height: 1;
+    font-family: var(--mono);
+  }
+  .kpi-card.blue .kpi-value { color: var(--blue); }
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.orange .kpi-value { color: var(--orange); }
+  .kpi-card.red .kpi-value { color: var(--red); }
+  .kpi-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+  /* Prediction result card */
+  .result-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .result-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+  }
+  .result-card-title {
+    font-size: 11px; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 16px;
+  }
+
+  /* Gauge */
+  .gauge-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  .gauge-svg { width: 180px; height: 100px; overflow: visible; }
+
+  .churn-verdict {
+    text-align: center;
+  }
+  .verdict-label {
+    font-size: 12px; color: var(--text3); margin-bottom: 6px;
+  }
+  .verdict-value {
+    font-size: 28px; font-weight: 600; font-family: var(--mono);
+  }
+  .verdict-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .verdict-badge.low { background: var(--green-dim); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .verdict-badge.medium { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(210,153,34,0.3); }
+  .verdict-badge.high { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+
+  /* Feature contributions */
+  .contrib-list { display: flex; flex-direction: column; gap: 8px; }
+  .contrib-item { display: flex; align-items: center; gap: 10px; }
+  .contrib-name { font-size: 12px; color: var(--text2); width: 120px; flex-shrink: 0; }
+  .contrib-bar-wrap { flex: 1; height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .contrib-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .contrib-bar.pos { background: var(--red); }
+  .contrib-bar.neg { background: var(--green); }
+  .contrib-val { font-family: var(--mono); font-size: 11px; color: var(--text3); width: 38px; text-align: right; }
+
+  /* Model insights */
+  .insights-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .insight-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+  }
+  .insight-title {
+    font-size: 11px; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 10px;
+  }
+  .insight-body { font-size: 13px; color: var(--text2); line-height: 1.55; }
+  .insight-highlight { color: var(--accent); font-family: var(--mono); font-size: 12px; }
+
+  /* Loading / idle state */
+  .idle-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 160px; gap: 8px;
+  }
+  .idle-icon { font-size: 32px; opacity: 0.25; }
+  .idle-text { font-size: 13px; color: var(--text3); }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  /* Error */
+  .error-box {
+    background: var(--red-dim);
+    border: 1px solid rgba(248,81,73,0.3);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--red);
+  }
+
+  /* API status dot */
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text3);
+    display: inline-block; margin-right: 5px;
+  }
+  .status-dot.ok { background: var(--green); box-shadow: 0 0 0 3px var(--green-dim); }
+  .status-dot.err { background: var(--red); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .panel-left { max-height: 55vh; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+    .result-row { grid-template-columns: 1fr; }
+    .insights-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <div>
+      <div class="logo-text">Churn Intelligence</div>
+      <div class="logo-sub">Bank Customer Attrition Model</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge-model">MLP · PyTorch</span>
+    <span class="badge-threshold">Threshold 0.6</span>
+    <span id="api-status-text" style="font-size:12px; color: var(--text3);">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-label">Connecting…</span>
+    </span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- Left: Input Panel -->
+  <div class="panel-left">
+
+    <div class="panel-section">
+      <div class="section-title">Demographics</div>
+
+      <div class="field">
+        <div class="field-label">Geography <span class="field-value" id="v-geo">France</span></div>
+        <select id="Geography" onchange="updateLabel('Geography','v-geo',null,this.value)">
+          <option value="France">France</option>
+          <option value="Germany">Germany</option>
+          <option value="Spain">Spain</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Gender</div>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-male" onclick="setGender('Male')">Male</button>
+          <button class="toggle-btn" id="btn-female" onclick="setGender('Female')">Female</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Age <span class="field-value" id="v-age">38</span></div>
+        <input type="range" id="Age" min="18" max="92" value="38" step="1"
+          oninput="updateLabel('Age','v-age',null,this.value)">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Financial Profile</div>
+
+      <div class="field">
+        <div class="field-label">Credit Score <span class="field-value" id="v-cs">650</span></div>
+        <input type="range" id="CreditScore" min="350" max="850" value="650" step="1"
+          oninput="updateLabel('CreditScore','v-cs',null,this.value)">
+      </div>
+
+      <div class="field">
+        <div class="field-label">Balance <span class="field-value" id="v-bal">€ 75,000</span></div>
+        <input type="range" id="Balance" min="0" max="250000" value="75000" step="500"
+          oninput="updateLabel('Balance','v-bal','currency',this.value)">
+      </div>
+
+      <div class="field">
+        <div class="field-label">Estimated Salary <span class="field-value" id="v-sal">€ 80,000</span></div>
+        <input type="range" id="EstimatedSalary" min="10000" max="200000" value="80000" step="1000"
+          oninput="updateLabel('EstimatedSalary','v-sal','currency',this.value)">
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-title">Account Details</div>
+
+      <div class="field">
+        <div class="field-label">Tenure (years) <span class="field-value" id="v-ten">5</span></div>
+        <input type="range" id="Tenure" min="0" max="10" value="5" step="1"
+          oninput="updateLabel('Tenure','v-ten',null,this.value)">
+      </div>
+
+      <div class="field">
+        <div class="field-label">Number of Products <span class="field-value" id="v-nop">2</span></div>
+        <input type="range" id="NumOfProducts" min="1" max="4" value="2" step="1"
+          oninput="updateLabel('NumOfProducts','v-nop',null,this.value)">
+      </div>
+
+      <div class="field">
+        <div class="field-label">Has Credit Card</div>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-cc1" onclick="setBinary('HasCrCard',1,'btn-cc1','btn-cc0')">Yes</button>
+          <button class="toggle-btn" id="btn-cc0" onclick="setBinary('HasCrCard',0,'btn-cc1','btn-cc0')">No</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Active Member</div>
+        <div class="toggle-row">
+          <button class="toggle-btn active" id="btn-am1" onclick="setBinary('IsActiveMember',1,'btn-am1','btn-am0')">Yes</button>
+          <button class="toggle-btn" id="btn-am0" onclick="setBinary('IsActiveMember',0,'btn-am1','btn-am0')">No</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <button class="predict-btn" id="predictBtn" onclick="runPrediction()">
+        Run Prediction →
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Right: Dashboard -->
+  <div class="panel-right">
+
+    <!-- KPI strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Churn Probability</div>
+        <div class="kpi-value" id="kpi-prob">—</div>
+        <div class="kpi-sub">MLP output (raw)</div>
+      </div>
+      <div class="kpi-card" id="kpi-verdict-card">
+        <div class="kpi-label">Decision</div>
+        <div class="kpi-value" id="kpi-decision" style="font-size:20px; margin-top:3px;">—</div>
+        <div class="kpi-sub" id="kpi-threshold-note">Threshold ≥ 0.60</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-label">F1 Score</div>
+        <div class="kpi-value">61.9%</div>
+        <div class="kpi-sub">Model benchmark</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Recall</div>
+        <div class="kpi-value">75.3%</div>
+        <div class="kpi-sub">True churn caught</div>
+      </div>
+    </div>
+
+    <!-- Gauge + Contributions -->
+    <div class="result-row">
+
+      <div class="result-card">
+        <div class="result-card-title">Churn Risk Gauge</div>
+        <div id="gauge-container">
+          <div class="idle-state">
+            <div class="idle-icon">○</div>
+            <div class="idle-text">Enter inputs and run prediction</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-card-title">Risk Factor Analysis</div>
+        <div id="contrib-container">
+          <div class="idle-state">
+            <div class="idle-icon">≡</div>
+            <div class="idle-text">Factors appear after prediction</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Insights -->
+    <div class="insights-row">
+      <div class="insight-card">
+        <div class="insight-title">Model Architecture</div>
+        <div class="insight-body">
+          MLP with <span class="insight-highlight">Dropout</span> regularization layers.
+          Trained on 10,000 bank customer records. Categorical features encoded via scikit-learn pipeline.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">Threshold Tuning</div>
+        <div class="insight-body">
+          Decision threshold set to <span class="insight-highlight">0.60</span> (vs default 0.5) to optimize
+          F1-Score — balancing precision and recall for imbalanced churn data.
+        </div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">Key Churn Drivers</div>
+        <div class="insight-body">
+          <span class="insight-highlight">Age &gt; 45</span> and
+          <span class="insight-highlight">Geography = Germany</span> are strongest predictors.
+          Inactive members with high balance are highest risk segment.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // TODO: Replace with your Hugging Face Spaces URL after deploying
+  // Format: https://YOUR-HF-USERNAME-churn-prediction-api.hf.space
+  const API_BASE = 'Lakshtech/churn-api.hf.space';
+
+  let formState = {
+    CreditScore: 650,
+    Geography: 'France',
+    Gender: 'Male',
+    Age: 38,
+    Tenure: 5,
+    Balance: 75000,
+    NumOfProducts: 2,
+    HasCrCard: 1,
+    IsActiveMember: 1,
+    EstimatedSalary: 80000
+  };
+
+  function updateLabel(field, labelId, type, val) {
+    formState[field] = type === 'currency' ? parseFloat(val) : (isNaN(+val) ? val : +val);
+    const el = document.getElementById(labelId);
+    if (!el) return;
+    if (type === 'currency') {
+      el.textContent = '€ ' + parseInt(val).toLocaleString();
+    } else {
+      el.textContent = val;
+    }
+  }
+
+  function setGender(g) {
+    formState.Gender = g;
+    document.getElementById('btn-male').classList.toggle('active', g === 'Male');
+    document.getElementById('btn-female').classList.toggle('active', g === 'Female');
+  }
+
+  function setBinary(field, val, btnOn, btnOff) {
+    formState[field] = val;
+    document.getElementById(btnOn).classList.toggle('active', val === 1);
+    document.getElementById(btnOff).classList.toggle('active', val === 0);
+  }
+
+  async function checkApiStatus() {
+    try {
+      const r = await fetch(API_BASE + '/Output', { method: 'GET', signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        document.getElementById('status-dot').className = 'status-dot ok';
+        document.getElementById('status-label').textContent = 'API Online';
+      } else { throw new Error(); }
+    } catch {
+      document.getElementById('status-dot').className = 'status-dot err';
+      document.getElementById('status-label').textContent = 'API Offline';
+    }
+  }
+
+  async function runPrediction() {
+    const btn = document.getElementById('predictBtn');
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+
+    setGaugeLoading();
+
+    try {
+      const payload = { ...formState };
+      const resp = await fetch(API_BASE + '/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(30000)
+      });
+
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      const data = await resp.json();
+
+      // Your API returns: { probability, is_churn, risk_level, message }
+      if (data.error) throw new Error(data.error);
+      const prob = data.probability ?? null;
+      const pred = data.is_churn === true ? 1 : data.is_churn === false ? 0 : (prob !== null ? (prob >= 0.6 ? 1 : 0) : null);
+      const riskFromApi = data.risk_level ?? null;
+
+      if (prob === null) throw new Error('Unexpected response shape — check /predict response keys');
+
+      displayResult(prob, pred, riskFromApi);
+
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Run Prediction →';
+    }
+  }
+
+  function setGaugeLoading() {
+    document.getElementById('gauge-container').innerHTML = `
+      <div class="idle-state"><div class="spinner"></div><div class="idle-text">Calling API…</div></div>`;
+    document.getElementById('contrib-container').innerHTML = `
+      <div class="idle-state"><div class="spinner"></div></div>`;
+  }
+
+  function showError(msg) {
+    document.getElementById('gauge-container').innerHTML = `
+      <div class="error-box">API Error: ${msg}<br><small style="opacity:0.7">If just deployed, HF Spaces may need ~30s to wake up. Try again.</small></div>`;
+    document.getElementById('contrib-container').innerHTML = `
+      <div class="idle-state"><div class="idle-text" style="color:var(--red)">Prediction failed</div></div>`;
+  }
+
+  function displayResult(prob, pred, riskFromApi) {
+    const pct = Math.round(prob * 100);
+
+    // KPI strip
+    document.getElementById('kpi-prob').textContent = pct + '%';
+
+    const vc = document.getElementById('kpi-verdict-card');
+    const vd = document.getElementById('kpi-decision');
+    if (pred === 1) {
+      vd.textContent = 'CHURN';
+      vd.style.color = 'var(--red)';
+      vc.className = 'kpi-card red';
+    } else {
+      vd.textContent = 'RETAIN';
+      vd.style.color = 'var(--green)';
+      vc.className = 'kpi-card green';
+    }
+
+    // Gauge — use risk_level directly from API, fall back to probability bands
+    const apiRisk = riskFromApi ? riskFromApi.toLowerCase() : null;
+    const riskClass = apiRisk === 'high' ? 'high' : apiRisk === 'medium' ? 'medium' : apiRisk === 'low' ? 'low'
+                    : pct >= 60 ? 'high' : pct >= 40 ? 'medium' : 'low';
+    const color = riskClass === 'high' ? 'var(--red)' : riskClass === 'medium' ? 'var(--orange)' : 'var(--green)';
+    const riskLabel = riskClass.charAt(0).toUpperCase() + riskClass.slice(1) + ' Risk';
+
+    const angle = -90 + (pct / 100) * 180;
+    const rad = angle * Math.PI / 180;
+    const cx = 90, cy = 90, r = 70;
+    const nx = cx + r * Math.cos(rad);
+    const ny = cy + r * Math.sin(rad);
+
+    document.getElementById('gauge-container').innerHTML = `
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 180 100">
+          <path d="M20,90 A70,70 0 0,1 160,90" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14" stroke-linecap="round"/>
+          <path d="M20,90 A70,70 0 0,1 160,90" fill="none" stroke="${color}" stroke-width="14" stroke-linecap="round"
+            stroke-dasharray="${Math.PI*70}" stroke-dashoffset="${Math.PI*70*(1-pct/100)}"
+            style="transition: stroke-dashoffset 0.8s ease, stroke 0.4s"/>
+          <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+          <circle cx="${cx}" cy="${cy}" r="4" fill="white" opacity="0.8"/>
+          <text x="18" y="108" font-size="10" fill="rgba(255,255,255,0.3)" font-family="var(--mono)">0%</text>
+          <text x="148" y="108" font-size="10" fill="rgba(255,255,255,0.3)" font-family="var(--mono)">100%</text>
+        </svg>
+        <div class="churn-verdict">
+          <div class="verdict-label">Churn Probability</div>
+          <div class="verdict-value" style="color:${color}">${pct}%</div>
+          <div class="verdict-badge ${riskClass}">${riskLabel}</div>
+        </div>
+      </div>`;
+
+    // Feature contributions (heuristic based on current inputs)
+    const factors = computeFactors();
+    let contribHTML = '<div class="contrib-list">';
+    factors.forEach(f => {
+      const w = Math.min(Math.abs(f.score) * 100, 100).toFixed(0);
+      const cls = f.score > 0 ? 'pos' : 'neg';
+      const sign = f.score > 0 ? '+' : '−';
+      contribHTML += `
+        <div class="contrib-item">
+          <span class="contrib-name">${f.name}</span>
+          <div class="contrib-bar-wrap">
+            <div class="contrib-bar ${cls}" style="width:${w}%"></div>
+          </div>
+          <span class="contrib-val">${sign}${Math.abs(f.score).toFixed(2)}</span>
+        </div>`;
+    });
+    contribHTML += '</div>';
+    document.getElementById('contrib-container').innerHTML = contribHTML;
+  }
+
+  function computeFactors() {
+    const s = formState;
+    const factors = [];
+
+    const ageScore = s.Age > 50 ? 0.38 : s.Age > 40 ? 0.20 : s.Age > 30 ? 0.05 : -0.08;
+    factors.push({ name: 'Age', score: ageScore });
+
+    const geoScore = s.Geography === 'Germany' ? 0.28 : s.Geography === 'Spain' ? -0.06 : 0.02;
+    factors.push({ name: 'Geography', score: geoScore });
+
+    const activeScore = s.IsActiveMember === 0 ? 0.24 : -0.18;
+    factors.push({ name: 'Active Member', score: activeScore });
+
+    const balScore = s.Balance > 150000 ? 0.15 : s.Balance > 80000 ? 0.08 : s.Balance === 0 ? -0.12 : 0.02;
+    factors.push({ name: 'Balance', score: balScore });
+
+    const prodScore = s.NumOfProducts === 1 ? 0.10 : s.NumOfProducts === 3 ? 0.22 : s.NumOfProducts === 4 ? 0.35 : -0.14;
+    factors.push({ name: 'Num Products', score: prodScore });
+
+    const csScore = s.CreditScore < 500 ? 0.08 : s.CreditScore > 750 ? -0.10 : -0.02;
+    factors.push({ name: 'Credit Score', score: csScore });
+
+    const tenScore = s.Tenure < 2 ? 0.06 : s.Tenure > 7 ? -0.08 : 0.01;
+    factors.push({ name: 'Tenure', score: tenScore });
+
+    factors.sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+    return factors.slice(0, 6);
+  }
+
+  checkApiStatus();
+  setInterval(checkApiStatus, 30000);
+</script>
+</body>
+</html>

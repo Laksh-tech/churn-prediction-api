@@ -135,3 +135,5 @@ uvicorn app.main:app --reload            # starts API on localhost:8000
 ```
 
 Open `frontend/index.html` in browser, update `API_BASE` to `http://localhost:8000`.
+<img width="1918" height="985" alt="image" src="https://github.com/user-attachments/assets/d9cd0891-4395-4886-a10a-9501c5828ff5" />
+
